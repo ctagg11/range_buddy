@@ -19,7 +19,6 @@ class LiveSessionScreen extends StatefulWidget {
 class _LiveSessionScreenState extends State<LiveSessionScreen> {
   String? _selectedClubId;
   Club? _selectedClub;
-  final _distanceController = TextEditingController();
   ShotShape? _selectedShape;
 
   @override
@@ -65,6 +64,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
               ),
             ],
           ),
+          centerTitle: false,
           backgroundColor: Colors.green,
           foregroundColor: Colors.white,
           actions: [
@@ -76,6 +76,36 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
         ),
         body: Column(
           children: [
+            // Header for club selector
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.sports_golf,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Clubs',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tap to switch',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             // Club Selector with stats at top
             Container(
               height: 100,
@@ -130,14 +160,25 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Stats at top
+                            // Club name
+                            Text(
+                              _getShortClubName(club),
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
                             if (shotCount > 0) ...[
                               Text(
-                                '${sessionAvg?.toStringAsFixed(0) ?? 0} yds',
+                                'Avg ${sessionAvg?.toStringAsFixed(0) ?? 0} yds',
                                 style: TextStyle(
                                   color: isSelected ? Colors.white : Colors.black87,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               Text(
@@ -149,20 +190,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                                   fontSize: 11,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                            ],
-                            // Club name
-                            Text(
-                              club.name,
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (shotCount == 0)
+                            ] else ...[
                               Text(
                                 'Tap to start',
                                 style: TextStyle(
@@ -172,6 +200,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                                   fontSize: 10,
                                 ),
                               ),
+                            ],
                           ],
                         ),
                       ),
@@ -181,8 +210,8 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
               ),
             ),
 
-            // Simplified Input Section
-            _buildSimplifiedInput(sessionProvider),
+            // Simplified Input Section (flexible to avoid overflow on small screens)
+            Flexible(child: _buildSimplifiedInput(sessionProvider)),
 
 
             // Recent Shots
@@ -263,7 +292,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
                               backgroundColor:
                                   Theme.of(context).colorScheme.primaryContainer,
                               child: Text(
-                                '${index + 1}',
+                                '${clubShots.length - index}',
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
@@ -296,35 +325,12 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
   }
 
   Widget _buildSimplifiedInput(SessionProvider sessionProvider) {
-    return Container(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Distance buttons grid - main input method
-          Container(
-            height: 240,
-            child: GridView.count(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.3,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildDistanceButton(50, sessionProvider),
-                _buildDistanceButton(75, sessionProvider),
-                _buildDistanceButton(100, sessionProvider),
-                _buildDistanceButton(125, sessionProvider),
-                _buildDistanceButton(150, sessionProvider),
-                _buildDistanceButton(175, sessionProvider),
-                _buildDistanceButton(200, sessionProvider),
-                _buildDistanceButton(225, sessionProvider),
-                _buildDistanceButton(250, sessionProvider),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Shot shape selector (optional)
-          Container(
+          // Shot shape selector (moved above yardage)
+          SizedBox(
             height: 40,
             child: ListView(
               scrollDirection: Axis.horizontal,
@@ -342,47 +348,36 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // Custom distance input
-          Row(
+          // Distance buttons grid - main input method
+          GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 3,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.3,
+            physics: const NeverScrollableScrollPhysics(),
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _distanceController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    labelText: 'Custom distance',
-                    hintText: 'Enter yards',
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.add_circle),
-                      color: Theme.of(context).colorScheme.primary,
-                      onPressed: () {
-                        if (_distanceController.text.isNotEmpty) {
-                          _addShotWithDistance(
-                            double.parse(_distanceController.text),
-                            sessionProvider,
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                  onSubmitted: (value) {
-                    if (value.isNotEmpty) {
-                      _addShotWithDistance(
-                        double.parse(value),
-                        sessionProvider,
-                      );
-                    }
-                  },
-                ),
-              ),
+              _buildDistanceButton(50, sessionProvider),
+              _buildDistanceButton(75, sessionProvider),
+              _buildDistanceButton(100, sessionProvider),
+              _buildDistanceButton(125, sessionProvider),
+              _buildDistanceButton(150, sessionProvider),
+              _buildDistanceButton(175, sessionProvider),
+              _buildDistanceButton(200, sessionProvider),
+              _buildDistanceButton(225, sessionProvider),
+              _buildDistanceButton(250, sessionProvider),
             ],
           ),
         ],
       ),
     );
+  }
+
+  String _getShortClubName(Club club) {
+    final raw = club.name.trim();
+    final cleaned = raw.replaceFirst(RegExp('^default\\s+', caseSensitive: false), '');
+    if (cleaned.length <= 12) return cleaned;
+    return Club.getClubTypeDisplayName(club.type);
   }
 
   Widget _buildDistanceButton(int distance, SessionProvider sessionProvider) {
@@ -509,9 +504,6 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
 
     sessionProvider.addShot(shot);
     
-    // Clear custom input
-    _distanceController.clear();
-    
     // Keep shape selected for next shot (user preference)
     // Reset shape after a delay if needed
     
@@ -571,7 +563,6 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
 
   @override
   void dispose() {
-    _distanceController.dispose();
     super.dispose();
   }
 }
