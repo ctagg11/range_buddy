@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:range_buddy/screens/sessions_screen.dart';
-import 'package:range_buddy/screens/bag_screen.dart';
-import 'package:range_buddy/screens/analytics_screen.dart';
-import 'package:range_buddy/screens/profile_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'providers/club_provider.dart';
+import 'providers/bag_provider.dart';
+import 'providers/session_provider.dart';
+import 'screens/sessions_screen.dart';
+import 'screens/golf_bag_screen.dart';
+import 'screens/analytics_screen.dart';
+import 'screens/profile_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(const RangeBuddyApp());
 }
 
@@ -13,14 +23,36 @@ class RangeBuddyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Range Buddy',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ClubProvider()),
+        ChangeNotifierProvider(create: (_) => BagProvider()),
+        ChangeNotifierProvider(create: (_) => SessionProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Range Buddy',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2E7D32),
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          appBarTheme: const AppBarTheme(
+            centerTitle: true,
+            elevation: 0,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ),
+        home: const MainScreen(),
+        debugShowCheckedModeBanner: false,
       ),
-      home: const MainScreen(),
-      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -37,10 +69,33 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const SessionsScreen(),
-    const BagScreen(),
+    const GolfBagScreen(),
     const AnalyticsScreen(),
     const ProfileScreen(),
   ];
+
+  final List<String> _titles = [
+    'Sessions',
+    'Golf Bag',
+    'Analytics',
+    'Profile',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final clubProvider = Provider.of<ClubProvider>(context, listen: false);
+    final bagProvider = Provider.of<BagProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    
+    await clubProvider.loadClubs();
+    await bagProvider.loadBags();
+    await sessionProvider.loadSessions();
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -52,11 +107,18 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Range Buddy'),
-        centerTitle: true,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        title: Text(
+          _titles[_selectedIndex],
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 0,
       ),
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
@@ -69,8 +131,8 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Sessions',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.sports_golf),
-            label: 'Bag',
+            icon: Icon(Icons.backpack),
+            label: 'Golf Bag',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
